@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神角色期望伤害计算器V4</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2b7de9',
+                        secondary: '#e6b450',
+                        bg: '#f5f7fa',
+                        card: '#ffffff',
+                        text: '#333333',
+                        error: '#e74c3c',
+                        highlight1: '#fffacd', // 淡黄色
+                        highlight2: '#e6e6fa', // 淡紫色
+                        highlight3: '#e0f7fa', // 淡蓝色
+                        highlight4: '#e8f5e9', // 淡绿色
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .shadow-custom {
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .transition-custom {
+                transition: all 0.3s ease;
+            }
+        }
+    </style>
+</head>
+<body class="bg-bg text-text min-h-screen p-4 md:p-6">
+    <div class="container mx-auto max-w-6xl">
+        <header class="text-center mb-8">
+            <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary mb-4">原神角色期望伤害计算器V4</h1>
+            <p class="text-gray-600 max-w-3xl mx-auto">
+                精确计算角色技能期望伤害，支持完整的伤害乘区计算，实时显示各词条边际收益
+            </p>
+        </header>
+         
+        <div class="calculator grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 输入区域 -->
+            <div class="input-section bg-card rounded-lg shadow-custom p-5">
+                <!-- 怪物参数区域 -->
+                <div class="monster-params mb-6 bg-gray-50 p-4 rounded-lg">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-demon mr-2"></i>怪物参数
+                    </h2>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="monsterResistance">怪物抗性 (%)</label>
+                            <input type="number" id="monsterResistance" min="0" max="100" step="1" value="10"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">怪物的基础抗性百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="monsterLevel">怪物等级</label>
+                            <input type="number" id="monsterLevel" min="1" max="90" step="1" value="90"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">怪物的等级</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="defenseReduction">队伍减防 (%)</label>
+                            <input type="number" id="defenseReduction" min="0" max="90" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">队伍提供的百分比减防</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="defenseIgnore">无视防御 (%)</label>
+                            <input type="number" id="defenseIgnore" min="0" max="100" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">百分比无视敌人防御</p>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 技能倍率区域 -->
+                <div class="skill-multipliers mb-6 bg-gray-50 p-4 rounded-lg">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-bolt mr-2"></i>技能倍率
+                    </h2>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="attackMultiplier">攻击倍率 (%)</label>
+                            <input type="number" id="attackMultiplier" min="0" step="0.1" value="100"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">基于攻击力的伤害倍率</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="hpMultiplier">生命倍率 (%)</label>
+                            <input type="number" id="hpMultiplier" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">基于生命值的伤害倍率</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="defMultiplier">防御倍率 (%)</label>
+                            <input type="number" id="defMultiplier" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">基于防御力的伤害倍率</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="emMultiplier">元素精通倍率 (%)</label>
+                            <input type="number" id="emMultiplier" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">基于元素精通的伤害倍率</p>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 角色标签切换 -->
+                <div class="character-tabs flex border-b border-gray-200 mb-4 overflow-x-auto">
+                    <div class="character-tab active px-4 py-2 cursor-pointer border-b-2 border-primary font-bold text-base whitespace-nowrap" data-target="main-character">
+                        主角色
+                    </div>
+                    <div class="character-tab px-4 py-2 cursor-pointer border-b-2 border-transparent hover:text-primary font-bold text-base whitespace-nowrap" data-target="support-1">
+                        辅助1
+                    </div>
+                    <div class="character-tab px-4 py-2 cursor-pointer border-b-2 border-transparent hover:text-primary font-bold text-base whitespace-nowrap" data-target="support-2">
+                        辅助2
+                    </div>
+                    <div class="character-tab px-4 py-2 cursor-pointer border-b-2 border-transparent hover:text-primary font-bold text-base whitespace-nowrap" data-target="support-3">
+                        辅助3
+                    </div>
+                    <div class="character-tab px-4 py-2 cursor-pointer border-b-2 border-transparent hover:text-primary font-bold text-base whitespace-nowrap" data-target="variable-adjustment">
+                        变量调整
+                    </div>
+                    <div class="character-tab px-4 py-2 cursor-pointer border-b-2 border-transparent hover:text-primary font-bold text-base whitespace-nowrap" data-target="reaction-settings">
+                        反应设置
+                    </div>
+                </div>
+                 
+                <!-- 主角色面板 -->
+                <div class="character-panel active" id="main-character">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-user mr-2"></i>主角色属性
+                    </h2>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="charLevel">角色等级</label>
+                            <input type="number" id="charLevel" min="1" max="90" step="1" value="90"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                        </div>
+                    </div>
+                     
+                    <div class="bg-blue-50 p-3 rounded-lg mb-6">
+                        <p class="text-xs text-blue-800"><i class="fa fa-info-circle mr-1"></i> 
+                        最终属性计算公式：面板值 + 基础值 × (主角色加成% + 所有辅助加成%) + 固定值加成</p>
+                    </div>
+                     
+                    <!-- 攻击力设置 -->
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-crosshairs mr-2"></i>攻击力设置
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="baseAttack">基础攻击力（白值）</label>
+                                <input type="number" id="baseAttack" min="1" step="1" value="1000"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">角色+武器基础攻击力（不包含任何加成）</p>
+                                <p class="text-xs text-error mt-1 hidden" id="baseAttackError">基础攻击力不能为0</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="panelAttack">面板攻击力</label>
+                                <input type="number" id="panelAttack" min="0" step="1" value="2100"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">角色面板上显示的攻击力（已包含主角色自身加成）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="charAttackPercent">主角色攻击力加成 (%)</label>
+                                <input type="number" id="charAttackPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">主角色自身的百分比攻击力加成（已包含在面板值中）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="charAttackFlat">主角色固定攻击力加成</label>
+                                <input type="number" id="charAttackFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">主角色自身的固定值攻击力加成（已包含在面板值中）</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <!-- 生命值设置 -->
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-heart mr-2"></i>生命值设置
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="baseHp">基础生命值（白值）</label>
+                                <input type="number" id="baseHp" min="1" step="1" value="10000"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">角色基础生命值（不包含任何加成）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="panelHp">面板生命值</label>
+                                <input type="number" id="panelHp" min="0" step="1" value="18000"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">角色面板上显示的生命值（已包含主角色自身加成）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="charHpPercent">主角色生命值加成 (%)</label>
+                                <input type="number" id="charHpPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">主角色自身的百分比生命值加成（已包含在面板值中）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="charHpFlat">主角色固定生命值加成</label>
+                                <input type="number" id="charHpFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">主角色自身的固定值生命值加成（已包含在面板值中）</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <!-- 防御力设置 -->
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-shield mr-2"></i>防御力设置
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="baseDef">基础防御力（白值）</label>
+                                <input type="number" id="baseDef" min="1" step="1" value="500"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">角色基础防御力（不包含任何加成）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="panelDef">面板防御力</label>
+                                <input type="number" id="panelDef" min="0" step="1" value="900"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">角色面板上显示的防御力（已包含主角色自身加成）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="charDefPercent">主角色防御力加成 (%)</label>
+                                <input type="number" id="charDefPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">主角色自身的百分比防御力加成（已包含在面板值中）</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="charDefFlat">主角色固定防御力加成</label>
+                                <input type="number" id="charDefFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">主角色自身的固定值防御力加成（已包含在面板值中）</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <!-- 其他属性 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="elementalMastery">元素精通</label>
+                            <input type="number" id="elementalMastery" min="0" step="1" value="311"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">角色面板上显示的元素精通值</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="critRate">暴击率 (%)</label>
+                            <input type="number" id="critRate" min="0" max="100" step="0.1" value="50"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">角色面板上显示的暴击率（已包含所有加成）</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="critDamage">暴击伤害 (%)</label>
+                            <input type="number" id="critDamage" min="0" step="0.1" value="150"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">角色面板上显示的暴击伤害（已包含所有加成）</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="damageBonus">伤害加成 (%)</label>
+                            <input type="number" id="damageBonus" min="0" step="0.1" value="46.6"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">元素/技能伤害加成总和（主角色自身）</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="charResRed">减抗百分比 (%)</label>
+                            <input type="number" id="charResRed" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">主角色提供的百分比减抗（如天赋或武器效果）</p>
+                        </div>
+                    </div>
+                     
+                    <!-- 基础区加伤 -->
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-plus-circle mr-2"></i>基础区加伤
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="mainBaseDamageBonus">固定值加伤</label>
+                                <input type="number" id="mainBaseDamageBonus" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接添加到基础伤害区的固定数值</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <!-- 独立增伤 -->
+                    <div class="independent-bonus mt-6">
+                        <h3 class="text-md font-semibold text-primary mb-3">独立增伤乘区</h3>
+                        <p class="text-xs text-gray-500 mb-3">相同编号的独立增伤会相加，不同编号的会相乘</p>
+                         
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="mainIndep1">增伤1 (%)</label>
+                                <input type="number" id="mainIndep1" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="mainIndep2">增伤2 (%)</label>
+                                <input type="number" id="mainIndep2" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="mainIndep3">增伤3 (%)</label>
+                                <input type="number" id="mainIndep3" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="mainIndep4">增伤4 (%)</label>
+                                <input type="number" id="mainIndep4" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="mainIndep5">增伤5 (%)</label>
+                                <input type="number" id="mainIndep5" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 辅助角色1面板 -->
+                <div class="character-panel hidden" id="support-1">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-user-plus mr-2"></i>辅助角色1加成
+                    </h2>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-crosshairs mr-2"></i>攻击力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup1AtkPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup1AtkPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础攻击的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup1AtkFlat">固定值加成</label>
+                                <input type="number" id="sup1AtkFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定攻击力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-heart mr-2"></i>生命值加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup1HpPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup1HpPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础生命的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup1HpFlat">固定值加成</label>
+                                <input type="number" id="sup1HpFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定生命值</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-shield mr-2"></i>防御力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup1DefPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup1DefPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础防御的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup1DefFlat">固定值加成</label>
+                                <input type="number" id="sup1DefFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定防御力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup1CritRate">暴击率加成 (%)</label>
+                            <input type="number" id="sup1CritRate" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击率百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup1CritDmg">暴击伤害加成 (%)</label>
+                            <input type="number" id="sup1CritDmg" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击伤害百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup1EM">元素精通加成</label>
+                            <input type="number" id="sup1EM" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素精通数值</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup1DmgBonus">伤害加成 (%)</label>
+                            <input type="number" id="sup1DmgBonus" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素/技能伤害百分比</p>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup1ResRed">减抗百分比 (%)</label>
+                            <input type="number" id="sup1ResRed" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">减少怪物抗性的百分比（如超导）</p>
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup1BaseDamageBonus">基础区加伤</label>
+                            <input type="number" id="sup1BaseDamageBonus" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">直接添加到基础伤害区的固定数值</p>
+                        </div>
+                    </div>
+                     
+                    <!-- 独立增伤 -->
+                    <div class="independent-bonus mt-6">
+                        <h3 class="text-md font-semibold text-primary mb-3">独立增伤乘区</h3>
+                        <p class="text-xs text-gray-500 mb-3">相同编号的独立增伤会相加，不同编号的会相乘</p>
+                         
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup1Indep1">增伤1 (%)</label>
+                                <input type="number" id="sup1Indep1" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup1Indep2">增伤2 (%)</label>
+                                <input type="number" id="sup1Indep2" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup1Indep3">增伤3 (%)</label>
+                                <input type="number" id="sup1Indep3" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup1Indep4">增伤4 (%)</label>
+                                <input type="number" id="sup1Indep4" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup1Indep5">增伤5 (%)</label>
+                                <input type="number" id="sup1Indep5" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 辅助角色2面板 -->
+                <div class="character-panel hidden" id="support-2">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-user-plus mr-2"></i>辅助角色2加成
+                    </h2>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-crosshairs mr-2"></i>攻击力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup2AtkPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup2AtkPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础攻击的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup2AtkFlat">固定值加成</label>
+                                <input type="number" id="sup2AtkFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定攻击力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-heart mr-2"></i>生命值加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup2HpPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup2HpPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础生命的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup2HpFlat">固定值加成</label>
+                                <input type="number" id="sup2HpFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定生命值</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-shield mr-2"></i>防御力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup2DefPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup2DefPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础防御的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup2DefFlat">固定值加成</label>
+                                <input type="number" id="sup2DefFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定防御力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup2CritRate">暴击率加成 (%)</label>
+                            <input type="number" id="sup2CritRate" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击率百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup2CritDmg">暴击伤害加成 (%)</label>
+                            <input type="number" id="sup2CritDmg" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击伤害百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup2EM">元素精通加成</label>
+                            <input type="number" id="sup2EM" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素精通数值</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup2DmgBonus">伤害加成 (%)</label>
+                            <input type="number" id="sup2DmgBonus" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素/技能伤害百分比</p>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup2ResRed">减抗百分比 (%)</label>
+                            <input type="number" id="sup2ResRed" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">减少怪物抗性的百分比（如超导）</p>
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup2BaseDamageBonus">基础区加伤</label>
+                            <input type="number" id="sup2BaseDamageBonus" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">直接添加到基础伤害区的固定数值</p>
+                        </div>
+                    </div>
+                     
+                    <!-- 独立增伤 -->
+                    <div class="independent-bonus mt-6">
+                        <h3 class="text-md font-semibold text-primary mb-3">独立增伤乘区</h3>
+                        <p class="text-xs text-gray-500 mb-3">相同编号的独立增伤会相加，不同编号的会相乘</p>
+                         
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup2Indep1">增伤1 (%)</label>
+                                <input type="number" id="sup2Indep1" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup2Indep2">增伤2 (%)</label>
+                                <input type="number" id="sup2Indep2" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup2Indep3">增伤3 (%)</label>
+                                <input type="number" id="sup2Indep3" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup2Indep4">增伤4 (%)</label>
+                                <input type="number" id="sup2Indep4" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup2Indep5">增伤5 (%)</label>
+                                <input type="number" id="sup2Indep5" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 辅助角色3面板 -->
+                <div class="character-panel hidden" id="support-3">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-user-plus mr-2"></i>辅助角色3加成
+                    </h2>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-crosshairs mr-2"></i>攻击力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup3AtkPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup3AtkPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础攻击的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup3AtkFlat">固定值加成</label>
+                                <input type="number" id="sup3AtkFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定攻击力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-heart mr-2"></i>生命值加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup3HpPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup3HpPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础生命的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup3HpFlat">固定值加成</label>
+                                <input type="number" id="sup3HpFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定生命值</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-shield mr-2"></i>防御力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup3DefPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup3DefPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础防御的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup3DefFlat">固定值加成</label>
+                                <input type="number" id="sup3DefFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定防御力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup3CritRate">暴击率加成 (%)</label>
+                            <input type="number" id="sup3CritRate" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击率百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup3CritDmg">暴击伤害加成 (%)</label>
+                            <input type="number" id="sup3CritDmg" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击伤害百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup3EM">元素精通加成</label>
+                            <input type="number" id="sup3EM" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素精通数值</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup3DmgBonus">伤害加成 (%)</label>
+                            <input type="number" id="sup3DmgBonus" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素/技能伤害百分比</p>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup3ResRed">减抗百分比 (%)</label>
+                            <input type="number" id="sup3ResRed" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">减少怪物抗性的百分比（如超导）</p>
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup3BaseDamageBonus">基础区加伤</label>
+                            <input type="number" id="sup3BaseDamageBonus" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">直接添加到基础伤害区的固定数值</p>
+                        </div>
+                    </div>
+                     
+                    <!-- 独立增伤 -->
+                    <div class="independent-bonus mt-6">
+                        <h3 class="text-md font-semibold text-primary mb-3">独立增伤乘区</h3>
+                        <p class="text-xs text-gray-500 mb-3">相同编号的独立增伤会相加，不同编号的会相乘</p>
+                         
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup3Indep1">增伤1 (%)</label>
+                                <input type="number" id="sup3Indep1" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup3Indep2">增伤2 (%)</label>
+                                <input type="number" id="sup3Indep2" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup3Indep3">增伤3 (%)</label>
+                                <input type="number" id="sup3Indep3" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup3Indep4">增伤4 (%)</label>
+                                <input type="number" id="sup3Indep4" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup3Indep5">增伤5 (%)</label>
+                                <input type="number" id="sup3Indep5" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 变量调整面板 -->
+                <div class="character-panel hidden" id="variable-adjustment">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-sliders mr-2"></i>变量调整加成
+                    </h2>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-crosshairs mr-2"></i>攻击力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup4AtkPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup4AtkPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础攻击的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup4AtkFlat">固定值加成</label>
+                                <input type="number" id="sup4AtkFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定攻击力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-heart mr-2"></i>生命值加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup4HpPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup4HpPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础生命的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup4HpFlat">固定值加成</label>
+                                <input type="number" id="sup4HpFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定生命值</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-shield mr-2"></i>防御力加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup4DefPercent">百分比加成 (%)</label>
+                                <input type="number" id="sup4DefPercent" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">基于主角色基础防御的百分比加成</p>
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="sup4DefFlat">固定值加成</label>
+                                <input type="number" id="sup4DefFlat" min="0" step="1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">直接增加的固定防御力</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup4CritRate">暴击率加成 (%)</label>
+                            <input type="number" id="sup4CritRate" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击率百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup4CritDmg">暴击伤害加成 (%)</label>
+                            <input type="number" id="sup4CritDmg" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的暴击伤害百分比</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup4EM">元素精通加成</label>
+                            <input type="number" id="sup4EM" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素精通数值</p>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup4DmgBonus">伤害加成 (%)</label>
+                            <input type="number" id="sup4DmgBonus" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">增加的元素/技能伤害百分比</p>
+                        </div>
+                    </div>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup4ResRed">减抗百分比 (%)</label>
+                            <input type="number" id="sup4ResRed" min="0" step="0.1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">减少怪物抗性的百分比（如超导）</p>
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="sup4BaseDamageBonus">基础区加伤</label>
+                            <input type="number" id="sup4BaseDamageBonus" min="0" step="1" value="0"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">直接添加到基础伤害区的固定数值</p>
+                        </div>
+                    </div>
+                     
+                    <!-- 独立增伤 -->
+                    <div class="independent-bonus mt-6">
+                        <h3 class="text-md font-semibold text-primary mb-3">独立增伤乘区</h3>
+                        <p class="text-xs text-gray-500 mb-3">相同编号的独立增伤会相加，不同编号的会相乘</p>
+                         
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup4Indep1">增伤1 (%)</label>
+                                <input type="number" id="sup4Indep1" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup4Indep2">增伤2 (%)</label>
+                                <input type="number" id="sup4Indep2" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup4Indep3">增伤3 (%)</label>
+                                <input type="number" id="sup4Indep3" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup4Indep4">增伤4 (%)</label>
+                                <input type="number" id="sup4Indep4" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                             
+                            <div class="input-group">
+                                <label class="block text-xs font-medium mb-1" for="sup4Indep5">增伤5 (%)</label>
+                                <input type="number" id="sup4Indep5" min="0" step="0.1" value="0"
+                                    class="w-full p-1.5 text-sm border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 反应设置面板 -->
+                <div class="character-panel hidden" id="reaction-settings">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-fire mr-2"></i>元素反应设置
+                    </h2>
+                     
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="reactionType">元素反应类型</label>
+                            <select id="reactionType"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <option value="none">无反应</option>
+                                <option value="vaporize">蒸发</option>
+                                <option value="melt" selected>融化</option>
+                            </select>
+                        </div>
+                         
+                        <div class="input-group">
+                            <label class="block text-sm font-medium mb-1" for="reactionRate">反应率 (%)</label>
+                            <input type="number" id="reactionRate" min="0" max="100" step="0.1" value="100"
+                                class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">元素反应发生的概率百分比</p>
+                        </div>
+                    </div>
+                     
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-md font-semibold text-primary mb-3 flex items-center">
+                            <i class="fa fa-line-chart mr-2"></i>反应伤害加成
+                        </h3>
+                         
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium mb-1" for="reactionBonus">反应伤害加成 (%)</label>
+                                <input type="number" id="reactionBonus" min="0" step="0.1" value="0"
+                                    class="w-full p-2 border border-gray-300 rounded transition-custom focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">如四风套、教官套等提供的反应伤害加成</p>
+                            </div>
+                        </div>
+                    </div>
+                     
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <p class="text-xs text-blue-800"><i class="fa fa-info-circle mr-1"></i> 
+                        元素反应计算公式：</p>
+                        <p class="text-xs text-blue-800 mt-1"><i class="fa fa-info-circle mr-1"></i> 
+                        - 蒸发 = 1.5 + 最终元素精通 × 2.78/(1400 + 最终元素精通)</p>
+                        <p class="text-xs text-blue-800 mt-1"><i class="fa fa-info-circle mr-1"></i> 
+                        - 融化 = 2.0 + 最终元素精通 × 2.78/(1400 + 最终元素精通)</p>
+                        <p class="text-xs text-blue-800 mt-1"><i class="fa fa-info-circle mr-1"></i> 
+                        反应区 = 反应率 × 元素反应 + (1 - 反应率) × 1</p>
+                        <p class="text-xs text-blue-800 mt-1"><i class="fa fa-info-circle mr-1"></i> 
+                        最终伤害 = 反应率0%时的伤害 × 反应区 × (1 + 反应伤害加成)</p>
+                    </div>
+                </div>
+            </div>
+             
+            <!-- 输出区域 -->
+            <div class="output-section flex flex-col gap-6">
+                <!-- 计算结果卡片 -->
+                <div class="result-card bg-card rounded-lg shadow-custom p-5">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-calculator mr-2"></i>计算结果
+                    </h2>
+                     
+                    <div class="damage-values grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="total-damage text-center">
+                            <p class="text-gray-500 mb-1">期望伤害</p>
+                            <p class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-primary" id="totalDamage">0</p>
+                            <p class="text-gray-500 text-sm mt-1">包含暴击期望与元素反应的最终伤害</p>
+                        </div>
+                         
+                        <div class="max-damage text-center">
+                            <p class="text-gray-500 mb-1">理论最高伤害</p>
+                            <p class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-error" id="maxDamage">0</p>
+                            <p class="text-gray-500 text-sm mt-1">暴击率视为100%时的最大伤害</p>
+                        </div>
+                    </div>
+                     
+                    <div class="damage-breakdown">
+                        <h3 class="text-md font-semibold mb-3">伤害构成</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">无反应基础伤害</span>
+                                <span id="baseDamageNoReaction">0</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">暴击期望</span>
+                                <span id="critExpectation">0x</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">伤害加成</span>
+                                <span id="damageBonusValue">0x</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">反应区</span>
+                                <span id="reactionMultiplier">0x</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">反应伤害加成</span>
+                                <span id="reactionBonusValue">0x</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">防御力减免</span>
+                                <span id="defenseReductionValue">0x</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">抗性区</span>
+                                <span id="resistanceValue">0x</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-gray-100">
+                                <span class="text-gray-600">独立增伤</span>
+                                <span id="independentBonusValue">0x</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 
+                <!-- 边际收益卡片 -->
+                <div class="marginal-gains bg-card rounded-lg shadow-custom p-5">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-arrow-up mr-2"></i>词条边际收益
+                    </h2>
+                     
+                    <p class="text-xs text-gray-500 mb-3">
+                        每个词条提升带来的伤害提升量及百分比（从高到低排序）
+                    </p>
+                     
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 text-left">
+                                    <th class="px-3 py-2 rounded-l-lg">词条类型</th>
+                                    <th class="px-3 py-2">词条数值</th>
+                                    <th class="px-3 py-2">伤害提升</th>
+                                    <th class="px-3 py-2 rounded-r-lg">提升百分比</th>
+                                </tr>
+                            </thead>
+                            <tbody id="marginalGainsTable">
+                                <!-- 边际收益数据将通过JavaScript动态填充 -->
+                                <tr>
+                                    <td colspan="4" class="px-3 py-4 text-center text-gray-500">请输入参数计算</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                 
+                <!-- 属性总结卡片 -->
+                <div class="stats-summary bg-card rounded-lg shadow-custom p-5">
+                    <h2 class="text-lg font-semibold text-primary mb-4 flex items-center">
+                        <i class="fa fa-bar-chart mr-2"></i>属性总结
+                    </h2>
+                     
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">最终攻击力</p>
+                            <p class="font-semibold" id="finalAttack">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">最终生命值</p>
+                            <p class="font-semibold" id="finalHp">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">最终防御力</p>
+                            <p class="font-semibold" id="finalDef">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">最终元素精通</p>
+                            <p class="font-semibold" id="finalEm">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">最终暴击率</p>
+                            <p class="font-semibold" id="finalCritRate">0%</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">最终暴击伤害</p>
+                            <p class="font-semibold" id="finalCritDamage">0%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+         
+        <footer class="mt-10 text-center text-gray-500 text-sm">
+            <p>原神角色期望伤害计算器V4 | 数据仅供参考，实际伤害以游戏内为准</p>
+        </footer>
+    </div>
+     
+    <script>
+        // 处理输入框空值和负值问题
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            // 设置min属性为0（除非是需要大于0的特殊字段）
+            if (!input.min && !['charLevel', 'monsterLevel', 'baseAttack', 'baseHp', 'baseDef', 'reactionRate'].includes(input.id)) {
+                input.min = 0;
+            }
+             
+            // 失去焦点时处理空值
+            input.addEventListener('blur', function() {
+                if (this.value === '' || isNaN(this.value)) {
+                    this.value = 0;
+                    calculateDamage();
+                }
+                 
+                // 确保值不小于最小值
+                if (this.value < this.min) {
+                    this.value = this.min;
+                    calculateDamage();
+                }
+                 
+                // 反应率不超过100%
+                if (this.id === 'reactionRate' && this.value > 100) {
+                    this.value = 100;
+                    calculateDamage();
+                }
+            });
+             
+            // 输入时阻止负值（对于允许为0的字段）
+            input.addEventListener('input', function() {
+                if (this.min === '0' && this.value < 0) {
+                    this.value = 0;
+                }
+                 
+                // 反应率不超过100%
+                if (this.id === 'reactionRate' && this.value > 100) {
+                    this.value = 100;
+                }
+            });
+        });
+         
+        // 标签切换功能
+        document.querySelectorAll('.character-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // 移除所有标签的活跃状态
+                document.querySelectorAll('.character-tab').forEach(t => {
+                    t.classList.remove('active', 'border-primary');
+                    t.classList.add('border-transparent');
+                });
+                 
+                // 添加当前标签的活跃状态
+                tab.classList.add('active', 'border-primary');
+                tab.classList.remove('border-transparent');
+                 
+                // 隐藏所有面板
+                document.querySelectorAll('.character-panel').forEach(panel => {
+                    panel.classList.add('hidden');
+                    panel.classList.remove('active');
+                });
+                 
+                // 显示对应面板
+                const targetPanel = document.getElementById(tab.dataset.target);
+                targetPanel.classList.remove('hidden');
+                targetPanel.classList.add('active');
+                 
+                // 重新计算伤害
+                calculateDamage();
+            });
+        });
+         
+        // 输入变化时重新计算
+        document.querySelectorAll('input, select').forEach(input => {
+            input.addEventListener('input', calculateDamage);
+        });
+         
+        // 计算伤害函数
+        function calculateDamage() {
+            // 安全获取数值的函数，处理空值和非数值情况
+            const getValue = (id, isPercentage = false) => {
+                const elem = document.getElementById(id);
+                if (!elem) return 0;
+                 
+                let value = parseFloat(elem.value);
+                if (isNaN(value) || value === '') value = 0;
+                 
+                // 确保不小于最小值
+                if (elem.min !== '' && value < parseFloat(elem.min)) {
+                    value = parseFloat(elem.min);
+                    elem.value = value;
+                }
+                 
+                // 反应率特殊处理，不超过100%
+                if (id === 'reactionRate' && value > 100) {
+                    value = 100;
+                    elem.value = value;
+                }
+                 
+                return isPercentage ? value / 100 : value;
+            };
+             
+            // 获取所有输入值，使用安全获取函数
+            const inputs = {
+                // 怪物参数
+                monsterResistance: getValue('monsterResistance', true),
+                monsterLevel: getValue('monsterLevel'),
+                defenseReduction: getValue('defenseReduction', true),
+                defenseIgnore: getValue('defenseIgnore', true),
+                 
+                // 技能倍率
+                attackMultiplier: getValue('attackMultiplier', true),
+                hpMultiplier: getValue('hpMultiplier', true),
+                defMultiplier: getValue('defMultiplier', true),
+                emMultiplier: getValue('emMultiplier', true),
+                 
+                // 主角色属性
+                charLevel: getValue('charLevel'),
+                baseAttack: getValue('baseAttack'),
+                panelAttack: getValue('panelAttack'),
+                charAttackPercent: getValue('charAttackPercent', true),
+                charAttackFlat: getValue('charAttackFlat'),
+                baseHp: getValue('baseHp'),
+                panelHp: getValue('panelHp'),
+                charHpPercent: getValue('charHpPercent', true),
+                charHpFlat: getValue('charHpFlat'),
+                baseDef: getValue('baseDef'),
+                panelDef: getValue('panelDef'),
+                charDefPercent: getValue('charDefPercent', true),
+                charDefFlat: getValue('charDefFlat'),
+                elementalMastery: getValue('elementalMastery'),
+                critRate: getValue('critRate', true),
+                critDamage: getValue('critDamage', true),
+                damageBonus: getValue('damageBonus', true),
+                mainBaseDamageBonus: getValue('mainBaseDamageBonus'),
+                charResRed: getValue('charResRed', true), // 主角色减抗百分比
+                 
+                // 主角色独立增伤
+                mainIndep1: getValue('mainIndep1', true),
+                mainIndep2: getValue('mainIndep2', true),
+                mainIndep3: getValue('mainIndep3', true),
+                mainIndep4: getValue('mainIndep4', true),
+                mainIndep5: getValue('mainIndep5', true),
+                 
+                // 辅助1加成
+                sup1AtkPercent: getValue('sup1AtkPercent', true),
+                sup1AtkFlat: getValue('sup1AtkFlat'),
+                sup1HpPercent: getValue('sup1HpPercent', true),
+                sup1HpFlat: getValue('sup1HpFlat'),
+                sup1DefPercent: getValue('sup1DefPercent', true),
+                sup1DefFlat: getValue('sup1DefFlat'),
+                sup1CritRate: getValue('sup1CritRate', true),
+                sup1CritDmg: getValue('sup1CritDmg', true),
+                sup1EM: getValue('sup1EM'),
+                sup1DmgBonus: getValue('sup1DmgBonus', true),
+                sup1ResRed: getValue('sup1ResRed', true),
+                sup1BaseDamageBonus: getValue('sup1BaseDamageBonus'),
+                sup1Indep1: getValue('sup1Indep1', true),
+                sup1Indep2: getValue('sup1Indep2', true),
+                sup1Indep3: getValue('sup1Indep3', true),
+                sup1Indep4: getValue('sup1Indep4', true),
+                sup1Indep5: getValue('sup1Indep5', true),
+                 
+                // 辅助2加成
+                sup2AtkPercent: getValue('sup2AtkPercent', true),
+                sup2AtkFlat: getValue('sup2AtkFlat'),
+                sup2HpPercent: getValue('sup2HpPercent', true),
+                sup2HpFlat: getValue('sup2HpFlat'),
+                sup2DefPercent: getValue('sup2DefPercent', true),
+                sup2DefFlat: getValue('sup2DefFlat'),
+                sup2CritRate: getValue('sup2CritRate', true),
+                sup2CritDmg: getValue('sup2CritDmg', true),
+                sup2EM: getValue('sup2EM'),
+                sup2DmgBonus: getValue('sup2DmgBonus', true),
+                sup2ResRed: getValue('sup2ResRed', true),
+                sup2BaseDamageBonus: getValue('sup2BaseDamageBonus'),
+                sup2Indep1: getValue('sup2Indep1', true),
+                sup2Indep2: getValue('sup2Indep2', true),
+                sup2Indep3: getValue('sup2Indep3', true),
+                sup2Indep4: getValue('sup2Indep4', true),
+                sup2Indep5: getValue('sup2Indep5', true),
+                 
+                // 辅助3加成
+                sup3AtkPercent: getValue('sup3AtkPercent', true),
+                sup3AtkFlat: getValue('sup3AtkFlat'),
+                sup3HpPercent: getValue('sup3HpPercent', true),
+                sup3HpFlat: getValue('sup3HpFlat'),
+                sup3DefPercent: getValue('sup3DefPercent', true),
+                sup3DefFlat: getValue('sup3DefFlat'),
+                sup3CritRate: getValue('sup3CritRate', true),
+                sup3CritDmg: getValue('sup3CritDmg', true),
+                sup3EM: getValue('sup3EM'),
+                sup3DmgBonus: getValue('sup3DmgBonus', true),
+                sup3ResRed: getValue('sup3ResRed', true),
+                sup3BaseDamageBonus: getValue('sup3BaseDamageBonus'),
+                sup3Indep1: getValue('sup3Indep1', true),
+                sup3Indep2: getValue('sup3Indep2', true),
+                sup3Indep3: getValue('sup3Indep3', true),
+                sup3Indep4: getValue('sup3Indep4', true),
+                sup3Indep5: getValue('sup3Indep5', true),
+                 
+                // 变量调整加成
+                sup4AtkPercent: getValue('sup4AtkPercent', true),
+                sup4AtkFlat: getValue('sup4AtkFlat'),
+                sup4HpPercent: getValue('sup4HpPercent', true),
+                sup4HpFlat: getValue('sup4HpFlat'),
+                sup4DefPercent: getValue('sup4DefPercent', true),
+                sup4DefFlat: getValue('sup4DefFlat'),
+                sup4CritRate: getValue('sup4CritRate', true),
+                sup4CritDmg: getValue('sup4CritDmg', true),
+                sup4EM: getValue('sup4EM'),
+                sup4DmgBonus: getValue('sup4DmgBonus', true),
+                sup4ResRed: getValue('sup4ResRed', true),
+                sup4BaseDamageBonus: getValue('sup4BaseDamageBonus'),
+                sup4Indep1: getValue('sup4Indep1', true),
+                sup4Indep2: getValue('sup4Indep2', true),
+                sup4Indep3: getValue('sup4Indep3', true),
+                sup4Indep4: getValue('sup4Indep4', true),
+                sup4Indep5: getValue('sup4Indep5', true),
+                 
+                // 反应设置
+                reactionType: document.getElementById('reactionType').value,
+                reactionRate: getValue('reactionRate', true), // 反应率
+                reactionBonus: getValue('reactionBonus', true)
+            };
+             
+            // 验证基础属性不为0
+            if (inputs.baseAttack <= 0) {
+                document.getElementById('baseAttackError').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('baseAttackError').classList.add('hidden');
+            }
+             
+            // 计算最终属性值
+            const finalStats = {
+                // 计算最终攻击力（包含所有辅助加成）
+                attack: inputs.panelAttack + 
+                        inputs.baseAttack * (inputs.sup1AtkPercent + inputs.sup2AtkPercent + inputs.sup3AtkPercent + inputs.sup4AtkPercent) +
+                        (inputs.sup1AtkFlat + inputs.sup2AtkFlat + inputs.sup3AtkFlat + inputs.sup4AtkFlat),
+                 
+                // 其他属性计算保持不变
+                hp: inputs.panelHp +
+                     inputs.baseHp * (inputs.sup1HpPercent + inputs.sup2HpPercent + inputs.sup3HpPercent + inputs.sup4HpPercent) +
+                     (inputs.sup1HpFlat + inputs.sup2HpFlat + inputs.sup3HpFlat + inputs.sup4HpFlat),
+                 
+                def: inputs.panelDef +
+                     inputs.baseDef * (inputs.sup1DefPercent + inputs.sup2DefPercent + inputs.sup3DefPercent + inputs.sup4DefPercent) +
+                     (inputs.sup1DefFlat + inputs.sup2DefFlat + inputs.sup3DefFlat + inputs.sup4DefFlat),
+                 
+                em: inputs.elementalMastery + inputs.sup1EM + inputs.sup2EM + inputs.sup3EM + inputs.sup4EM,
+                 
+                critRate: Math.min(1, inputs.critRate + inputs.sup1CritRate + inputs.sup2CritRate + inputs.sup3CritRate + inputs.sup4CritRate),
+                 
+                critDamage: inputs.critDamage + inputs.sup1CritDmg + inputs.sup2CritDmg + inputs.sup3CritDmg + inputs.sup4CritDmg,
+                 
+                damageBonus: inputs.damageBonus + inputs.sup1DmgBonus + inputs.sup2DmgBonus + inputs.sup3DmgBonus + inputs.sup4DmgBonus,
+                 
+                monsterResistance: inputs.monsterResistance - 
+                                  (inputs.charResRed + inputs.sup1ResRed + inputs.sup2ResRed + inputs.sup3ResRed + inputs.sup4ResRed),
+                 
+                totalBaseDamageBonus: inputs.mainBaseDamageBonus + inputs.sup1BaseDamageBonus + 
+                                      inputs.sup2BaseDamageBonus + inputs.sup3BaseDamageBonus + inputs.sup4BaseDamageBonus
+            };
+             
+            // 计算抗性区
+            let resistanceValue;
+            if (finalStats.monsterResistance < 0) {
+                resistanceValue = 1 - (finalStats.monsterResistance / 2);
+            } else if (finalStats.monsterResistance <= 0.75) {
+                resistanceValue = 1 - finalStats.monsterResistance;
+            } else {
+                resistanceValue = 1 / (1 + finalStats.monsterResistance * 4);
+            }
+             
+            // 计算独立增伤
+            const indep1 = 1 + inputs.mainIndep1 + inputs.sup1Indep1 + inputs.sup2Indep1 + inputs.sup3Indep1 + inputs.sup4Indep1;
+            const indep2 = 1 + inputs.mainIndep2 + inputs.sup1Indep2 + inputs.sup2Indep2 + inputs.sup3Indep2 + inputs.sup4Indep2;
+            const indep3 = 1 + inputs.mainIndep3 + inputs.sup1Indep3 + inputs.sup2Indep3 + inputs.sup3Indep3 + inputs.sup4Indep3;
+            const indep4 = 1 + inputs.mainIndep4 + inputs.sup1Indep4 + inputs.sup2Indep4 + inputs.sup3Indep4 + inputs.sup4Indep4;
+            const indep5 = 1 + inputs.mainIndep5 + inputs.sup1Indep5 + inputs.sup2Indep5 + inputs.sup3Indep5 + inputs.sup4Indep5;
+            const totalIndependentBonus = indep1 * indep2 * indep3 * indep4 * indep5;
+             
+            // 计算防御力减免
+            const defenseReduction = 1 - inputs.defenseReduction;
+            const defenseIgnore = inputs.defenseIgnore;
+            const levelFactor = (inputs.charLevel + 100) / 
+                               ((inputs.charLevel + 100) + (inputs.monsterLevel + 100) * (1 - defenseIgnore) * defenseReduction);
+             
+            // 计算基础伤害
+            const baseDamage = (finalStats.attack * inputs.attackMultiplier + 
+                               finalStats.hp * inputs.hpMultiplier + 
+                               finalStats.def * inputs.defMultiplier + 
+                               finalStats.em * inputs.emMultiplier) +
+                               finalStats.totalBaseDamageBonus;
+             
+            // 计算暴击期望
+            const critExpectation = 1 + finalStats.critRate * finalStats.critDamage;
+            const maxCritMultiplier = 1 + 1 * finalStats.critDamage;
+             
+            // 计算元素反应倍率和反应区
+            let reactionMultiplier = 1;
+            const emFactor = (finalStats.em * 2.78) / (finalStats.em + 1400);
+             
+            switch(inputs.reactionType) {
+                case 'vaporize':
+                    reactionMultiplier = 1.5 + emFactor;
+                    break;
+                case 'melt':
+                    reactionMultiplier = 2.0 + emFactor;
+                    break;
+                default:
+                    reactionMultiplier = 1;
+            }
+             
+            const reactionZone = inputs.reactionRate * reactionMultiplier + (1 - inputs.reactionRate) * 1;
+            const reactionBonusMultiplier = 1 + inputs.reactionBonus;
+             
+            // 计算无反应时的基础伤害
+            const baseDamageNoReaction = Math.round(baseDamage * 
+                                                  critExpectation * 
+                                                  (1 + finalStats.damageBonus) * 
+                                                  levelFactor * 
+                                                  resistanceValue * 
+                                                  totalIndependentBonus);
+             
+            // 计算100%暴击时无反应的基础伤害
+            const maxBaseDamageNoReaction = Math.round(baseDamage * 
+                                                     maxCritMultiplier * 
+                                                     (1 + finalStats.damageBonus) * 
+                                                     levelFactor * 
+                                                     resistanceValue * 
+                                                     totalIndependentBonus);
+             
+            // 最终伤害计算
+            const totalDamage = Math.round(baseDamageNoReaction * reactionZone * reactionBonusMultiplier);
+            const maxDamage = Math.round(maxBaseDamageNoReaction * reactionZone * reactionBonusMultiplier);
+             
+            // 更新UI显示
+            document.getElementById('totalDamage').textContent = totalDamage.toLocaleString();
+            document.getElementById('maxDamage').textContent = maxDamage.toLocaleString();
+            document.getElementById('baseDamageNoReaction').textContent = baseDamageNoReaction.toLocaleString();
+            document.getElementById('critExpectation').textContent = critExpectation.toFixed(2) + 'x';
+            document.getElementById('damageBonusValue').textContent = (1 + finalStats.damageBonus).toFixed(2) + 'x';
+            document.getElementById('reactionMultiplier').textContent = reactionZone.toFixed(3) + 'x';
+            document.getElementById('reactionBonusValue').textContent = reactionBonusMultiplier.toFixed(2) + 'x';
+            document.getElementById('defenseReductionValue').textContent = levelFactor.toFixed(2) + 'x';
+            document.getElementById('resistanceValue').textContent = resistanceValue.toFixed(3) + 'x';
+            document.getElementById('independentBonusValue').textContent = totalIndependentBonus.toFixed(2) + 'x';
+             
+            // 更新属性总结
+            document.getElementById('finalAttack').textContent = Math.round(finalStats.attack).toLocaleString();
+            document.getElementById('finalHp').textContent = Math.round(finalStats.hp).toLocaleString();
+            document.getElementById('finalDef').textContent = Math.round(finalStats.def).toLocaleString();
+            document.getElementById('finalEm').textContent = Math.round(finalStats.em).toLocaleString();
+            document.getElementById('finalCritRate').textContent = (finalStats.critRate * 100).toFixed(1) + '%';
+            document.getElementById('finalCritDamage').textContent = (finalStats.critDamage * 100).toFixed(1) + '%';
+             
+            // 计算边际收益
+            calculateMarginalGains(inputs, finalStats, baseDamage, critExpectation, maxCritMultiplier,
+                                 (1 + finalStats.damageBonus), levelFactor, resistanceValue, 
+                                 totalIndependentBonus, reactionMultiplier, reactionZone, reactionBonusMultiplier, 
+                                 emFactor, baseDamageNoReaction, maxBaseDamageNoReaction, totalDamage, maxDamage);
+        }
+         
+        // 计算边际收益 - 重点修复攻击力相关计算
+        function calculateMarginalGains(inputs, finalStats, baseDamage, critExpectation, maxCritMultiplier,
+                                      damageBonusMultiplier, levelFactor, resistanceValue, 
+                                      totalIndependentBonus, reactionMultiplier, reactionZone, reactionBonusMultiplier, 
+                                      emFactor, baseDamageNoReaction, maxBaseDamageNoReaction, totalDamage, maxDamage) {
+            // 定义各个词条的提升值
+            const stats = [
+                { name: '攻击百分比', value: 4.96, type: 'attackPercent' },
+                { name: '小攻击', value: 16.5, type: 'attackFlat' },
+                { name: '生命百分比', value: 4.96, type: 'hpPercent' },
+                { name: '小生命', value: 254, type: 'hpFlat' },
+                { name: '防御百分比', value: 6.2, type: 'defPercent' },
+                { name: '小防御', value: 19.7, type: 'defFlat' },
+                { name: '暴击率', value: 3.3, type: 'critRate' },
+                { name: '暴击伤害', value: 6.6, type: 'critDamage' },
+                { name: '元素精通', value: 19.8, type: 'em' },
+                { name: '伤害加成', value: 4.96, type: 'damageBonus' }
+            ];
+             
+            // 计算每个词条的收益
+            const gains = stats.map(stat => {
+                let newBaseDamageNoReaction = baseDamageNoReaction;
+                let newReactionZone = reactionZone;
+                 
+                switch(stat.type) {
+                    case 'attackPercent':
+                        // 修复攻击百分比边际收益计算，按照用户提供的逻辑
+                        // 1. 计算该百分比提升带来的攻击力增加值
+                        const atkPercentGain = stat.value / 100; // 转换为小数
+                        const additionalAtkFromPercent = inputs.baseAttack * atkPercentGain;
+                         
+                        // 2. 计算新的总攻击力
+                        const newTotalAttack = finalStats.attack + additionalAtkFromPercent;
+                         
+                        // 3. 计算攻击力提升比例
+                        const atkGainRatio = newTotalAttack / finalStats.attack;
+                         
+                        // 4. 应用到基础伤害
+                        newBaseDamageNoReaction = Math.round(baseDamageNoReaction * atkGainRatio);
+                        break;
+                         
+                    case 'attackFlat':
+                        // 修复固定攻击边际收益计算
+                        // 1. 计算新的总攻击力
+                        const newTotalAttackFlat = finalStats.attack + stat.value;
+                         
+                        // 2. 计算攻击力提升比例
+                        const atkGainRatioFlat = newTotalAttackFlat / finalStats.attack;
+                         
+                        // 3. 应用到基础伤害
+                        newBaseDamageNoReaction = Math.round(baseDamageNoReaction * atkGainRatioFlat);
+                        break;
+                         
+                    // 其他词条的计算保持不变
+                    case 'hpPercent':
+                        const hpGain = inputs.baseHp * (stat.value / 100);
+                        const newBaseDamage3 = baseDamage + hpGain * inputs.hpMultiplier;
+                        newBaseDamageNoReaction = Math.round(newBaseDamage3 * 
+                                                           critExpectation * 
+                                                           damageBonusMultiplier * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                         
+                    case 'hpFlat':
+                        const newBaseDamage4 = baseDamage + stat.value * inputs.hpMultiplier;
+                        newBaseDamageNoReaction = Math.round(newBaseDamage4 * 
+                                                           critExpectation * 
+                                                           damageBonusMultiplier * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                         
+                    case 'defPercent':
+                        const defGain = inputs.baseDef * (stat.value / 100);
+                        const newBaseDamage5 = baseDamage + defGain * inputs.defMultiplier;
+                        newBaseDamageNoReaction = Math.round(newBaseDamage5 * 
+                                                           critExpectation * 
+                                                           damageBonusMultiplier * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                         
+                    case 'defFlat':
+                        const newBaseDamage6 = baseDamage + stat.value * inputs.defMultiplier;
+                        newBaseDamageNoReaction = Math.round(newBaseDamage6 * 
+                                                           critExpectation * 
+                                                           damageBonusMultiplier * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                         
+                    case 'critRate':
+                        const newCritRate = Math.min(1, finalStats.critRate + (stat.value / 100));
+                        const newCritExpectation = 1 + newCritRate * finalStats.critDamage;
+                        newBaseDamageNoReaction = Math.round(baseDamage * 
+                                                           newCritExpectation * 
+                                                           damageBonusMultiplier * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                         
+                    case 'critDamage':
+                        const newCritDamage = finalStats.critDamage + (stat.value / 100);
+                        const newCritExpectation2 = 1 + finalStats.critRate * newCritDamage;
+                        newBaseDamageNoReaction = Math.round(baseDamage * 
+                                                           newCritExpectation2 * 
+                                                           damageBonusMultiplier * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                         
+                    case 'em':
+                        // 元素精通提升
+                        const emBaseGain = stat.value * inputs.emMultiplier;
+                        const newBaseDamage7 = baseDamage + emBaseGain;
+                         
+                        if (inputs.reactionType !== 'none') {
+                            const newEm = finalStats.em + stat.value;
+                            const newEmFactor = (newEm * 2.78) / (newEm + 1400);
+                             
+                            let newReactionMultiplier = 1;
+                            switch(inputs.reactionType) {
+                                case 'vaporize':
+                                    newReactionMultiplier = 1.5 + newEmFactor;
+                                    break;
+                                case 'melt':
+                                    newReactionMultiplier = 2.0 + newEmFactor;
+                                    break;
+                            }
+                             
+                            newReactionZone = inputs.reactionRate * newReactionMultiplier + (1 - inputs.reactionRate) * 1;
+                        }
+                         
+                        newBaseDamageNoReaction = Math.round(newBaseDamage7 * 
+                                                           critExpectation * 
+                                                           damageBonusMultiplier * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                         
+                    case 'damageBonus':
+                        const newDamageBonus = damageBonusMultiplier + (stat.value / 100);
+                        newBaseDamageNoReaction = Math.round(baseDamage * 
+                                                           critExpectation * 
+                                                           newDamageBonus * 
+                                                           levelFactor * 
+                                                           resistanceValue * 
+                                                           totalIndependentBonus);
+                        break;
+                }
+                 
+                // 计算提升后的总伤害
+                const newTotalDamage = Math.round(newBaseDamageNoReaction * newReactionZone * reactionBonusMultiplier);
+                 
+                // 计算总收益
+                const totalGain = newTotalDamage - totalDamage;
+                // 计算提升百分比
+                const gainPercentage = totalDamage > 0 ? (totalGain / totalDamage) * 100 : 0;
+                 
+                return {
+                    name: stat.name,
+                    value: stat.value + (stat.type === 'critRate' || stat.type === 'critDamage' || 
+                                       stat.type === 'attackPercent' || stat.type === 'hpPercent' ||
+                                       stat.type === 'defPercent' || stat.type === 'damageBonus' ? '%' : ''),
+                    gain: Math.round(totalGain),
+                    gainPercentage: gainPercentage
+                };
+            });
+             
+            // 按收益从高到低排序
+            gains.sort((a, b) => b.gain - a.gain);
+             
+            // 更新边际收益表格
+            const tableBody = document.getElementById('marginalGainsTable');
+            tableBody.innerHTML = '';
+             
+            gains.forEach((gain, index) => {
+                // 确定背景颜色
+                let bgColor = '';
+                if (gain.gain <= 0) {
+                    bgColor = '';
+                } else if (index === 0) {
+                    bgColor = 'bg-highlight1';
+                } else if (index === 1) {
+                    bgColor = 'bg-highlight2';
+                } else if (index === 2) {
+                    bgColor = 'bg-highlight3';
+                } else if (index === 3) {
+                    bgColor = 'bg-highlight4';
+                }
+                 
+                const row = document.createElement('tr');
+                row.className = bgColor;
+                row.innerHTML = `
+                    <td class="px-3 py-2 border-b border-gray-100">${gain.name}</td>
+                    <td class="px-3 py-2 border-b border-gray-100">${gain.value}</td>
+                    <td class="px-3 py-2 border-b border-gray-100 ${gain.gain > 0 ? 'text-green-600' : ''}">${gain.gain >= 0 ? '+' : ''}${gain.gain}</td>
+                    <td class="px-3 py-2 border-b border-gray-100 ${gain.gainPercentage > 0 ? 'text-green-600' : ''}">${gain.gainPercentage >= 0 ? '+' : ''}${gain.gainPercentage.toFixed(2)}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+         
+        // 初始计算
+        window.addEventListener('load', calculateDamage);
+    </script>
+</body>
+</html>
